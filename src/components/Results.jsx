@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
+const fmt = (n) => {
+  const r = Math.round(n * 100) / 100
+  return Number.isInteger(r) ? String(r) : r.toFixed(2)
+}
+const sign = (n) => (n > 0 ? '+' : '')
+const cls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '')
+
 export default function Results() {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -14,19 +21,16 @@ export default function Results() {
         const map = {}
         for (const p of data) {
           const k = p.machine_name
-          if (!map[k]) map[k] = { machine: k, plays: 0, units: 0, dollars: 0 }
-          map[k].plays += 1
+          if (!map[k]) map[k] = { machine: k, entries: 0, units: 0, dollars: 0 }
+          map[k].entries += 1
           map[k].units += Number(p.result_units) || 0
           map[k].dollars += Number(p.result_dollars) || 0
         }
-        setRows(Object.values(map).sort((a, b) => b.plays - a.plays))
+        setRows(Object.values(map).sort((a, b) => b.entries - a.entries))
       }
       setLoading(false)
     })()
   }, [])
-
-  const sign = (n) => (n > 0 ? '+' : '')
-  const cls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '')
 
   if (loading) return <p className="muted">Loading…</p>
   if (rows.length === 0)
@@ -43,19 +47,19 @@ export default function Results() {
       <table className="results">
         <thead>
           <tr>
-            <th className="left">Machine</th>
-            <th>Plays</th>
-            <th>± Units</th>
-            <th>± $</th>
+            <th className="left">Game</th>
+            <th>Entries</th>
+            <th>Units</th>
+            <th>$$$</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.machine}>
               <td className="left">{r.machine}</td>
-              <td className="num">{r.plays}</td>
-              <td className={`num ${cls(r.units)}`}>{sign(r.units)}{r.units}</td>
-              <td className={`num ${cls(r.dollars)}`}>{sign(r.dollars)}{r.dollars.toFixed(2)}</td>
+              <td className="num">{r.entries}</td>
+              <td className={`num ${cls(r.units)}`}>{sign(r.units)}{fmt(r.units)}</td>
+              <td className={`num ${cls(r.dollars)}`}>{sign(r.dollars)}{fmt(r.dollars)}</td>
             </tr>
           ))}
         </tbody>

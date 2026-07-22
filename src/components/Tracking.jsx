@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { MACHINES } from '../machines'
+import { MACHINES, COMMON_FIELDS } from '../machines'
+import Field from './Field'
+
+const sortedMachines = [...MACHINES].sort((a, b) => a.name.localeCompare(b.name))
 
 export default function Tracking({ session }) {
   const [machine, setMachine] = useState(null)
@@ -8,14 +11,14 @@ export default function Tracking({ session }) {
   const [busy, setBusy] = useState(false)
   const [flash, setFlash] = useState('')
 
-  // Step 1: pick a machine
+  // Step 1: pick a machine (alphabetical)
   if (!machine) {
     return (
       <div>
         <h2 className="screen-title">Pick a machine</h2>
         {flash && <div className="flash">{flash}</div>}
         <div className="machine-list">
-          {MACHINES.map((m) => (
+          {sortedMachines.map((m) => (
             <button
               key={m.id}
               className="machine-item"
@@ -30,25 +33,27 @@ export default function Tracking({ session }) {
     )
   }
 
-  // Step 2: fill fields for the picked machine
-  const set = (key) => (e) => setValues({ ...values, [key]: e.target.value })
+  // Step 2: common fields + machine-specific fields
+  const set = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }))
+  const allFields = [...COMMON_FIELDS, ...machine.fields]
 
   const addPlay = async () => {
     setBusy(true)
-    const unitsField = machine.fields.find((f) => f.role === 'units')
-    const dollarsField = machine.fields.find((f) => f.role === 'dollars')
-    const row = {
+    const inV = Number(values.in) || 0
+    const outV = Number(values.out) || 0
+    const spin = Number(values.spin) || 0
+    const dollars = outV - inV
+    const units = spin ? dollars / spin : 0
+    const { error } = await supabase.from('plays').insert({
       user_id: session.user.id,
       machine_id: machine.id,
       machine_name: machine.name,
       data: values,
-      result_units: unitsField ? Number(values[unitsField.key]) || 0 : 0,
-      result_dollars: dollarsField ? Number(values[dollarsField.key]) || 0 : 0,
-    }
-    const { error } = await supabase.from('plays').insert(row)
+      result_units: units,
+      result_dollars: dollars,
+    })
     setBusy(false)
     if (error) { alert(error.message); return }
-    // back to machine selection with a confirmation
     setFlash(`Play added to ${machine.name}`)
     setMachine(null)
     setValues({})
@@ -56,23 +61,11 @@ export default function Tracking({ session }) {
 
   return (
     <div>
-      <button className="linkbtn" onClick={() => { setMachine(null); setValues({}) }}>
-        ‹ Machines
-      </button>
+      <button className="linkbtn" onClick={() => { setMachine(null); setValues({}) }}>‹ Machines</button>
       <h2 className="screen-title">{machine.name}</h2>
-
       <div className="form">
-        {machine.fields.map((f) => (
-          <label key={f.key} className="field">
-            <span className="field-label">{f.label}</span>
-            <input
-              className="input"
-              type={f.type === 'number' ? 'number' : 'text'}
-              inputMode={f.type === 'number' ? 'decimal' : 'text'}
-              value={values[f.key] ?? ''}
-              onChange={set(f.key)}
-            />
-          </label>
+        {allFields.map((f) => (
+          <Field key={f.key} f={f} value={values[f.key]} onChange={set(f.key)} />
         ))}
         <button className="btn primary block" onClick={addPlay} disabled={busy}>
           {busy ? 'Adding…' : 'Add play'}

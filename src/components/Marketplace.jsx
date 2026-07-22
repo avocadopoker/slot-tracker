@@ -1,50 +1,87 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { MACHINES } from '../machines'
+import { MACHINES, COMMON_FIELDS, AREAS } from '../machines'
+import Field from './Field'
+
+const sortedMachines = [...MACHINES].sort((a, b) => a.name.localeCompare(b.name))
+const machineById = Object.fromEntries(MACHINES.map((m) => [m.id, m]))
+
+function statsString(machineId, data) {
+  const m = machineById[machineId]
+  if (!m) return ''
+  return [...COMMON_FIELDS, ...m.fields]
+    .map((f) => {
+      const v = data?.[f.key]
+      if (v === undefined || v === null || v === '') return null
+      return `${f.label}: ${v}`
+    })
+    .filter(Boolean)
+    .join(' · ')
+}
+
+function timeLeft(expiresAt) {
+  const ms = new Date(expiresAt) - new Date()
+  if (ms <= 0) return 'expired'
+  const mins = Math.floor(ms / 60000)
+  const h = Math.floor(mins / 60)
+  const mm = mins % 60
+  return h > 0 ? `${h}h ${mm}m left` : `${mm}m left`
+}
 
 export default function Marketplace({ session }) {
+  const [view, setView] = useState('list') // list | post | chat
+  const [chatListing, setChatListing] = useState(null)
   const [listings, setListings] = useState([])
-  const [open, setOpen] = useState(null)
-  const [showForm, setShowForm] = useState(false)
+  const [area, setArea] = useState('')
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
-    const { data } = await supabase
+    setLoading(true)
+    let q = supabase
       .from('listings')
       .select('*')
+      .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
+    if (area) q = q.eq('area', area)
+    const { data } = await q
     setListings(data || [])
     setLoading(false)
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [area])
 
-  if (open) return <Chat listing={open} session={session} onBack={() => setOpen(null)} />
+  if (view === 'post')
+    return <PostFlow session={session} onDone={() => { setView('list'); load() }} onCancel={() => setView('list')} />
+  if (view === 'chat' && chatListing)
+    return <Chat listing={chatListing} session={session} onBack={() => setView('list')} />
 
   return (
     <div>
       <div className="row-between">
         <h2 className="screen-title">Marketplace</h2>
-        <button className="btn primary small" onClick={() => setShowForm((s) => !s)}>
-          {showForm ? 'Close' : '+ Post'}
-        </button>
+        <button className="btn primary small" onClick={() => setView('post')}>+ Post play</button>
       </div>
 
-      {showForm && (
-        <PostForm session={session} onPosted={() => { setShowForm(false); load() }} />
-      )}
+      <label className="field">
+        <span className="field-label">Filter by area</span>
+        <select className="input" value={area} onChange={(e) => setArea(e.target.value)}>
+          <option value="">All areas</option>
+          {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+        </select>
+      </label>
 
       {loading ? (
         <p className="muted">Loading…</p>
       ) : listings.length === 0 ? (
-        <div className="empty">No plays listed yet. Be the first to post one.</div>
+        <div className="empty">No active plays{area ? ` in ${area}` : ''}. Post one or check back soon.</div>
       ) : (
         listings.map((l) => (
-          <button key={l.id} className="listing" onClick={() => setOpen(l)}>
+          <button key={l.id} className="listing" onClick={() => { setChatListing(l); setView('chat') }}>
             <div className="listing-head">
               <span className="listing-title">{l.machine_name}</span>
-              <span className="price">${Number(l.price_usd).toFixed(2)}</span>
+              <span className="time-left">{timeLeft(l.expires_at)}</span>
             </div>
-            {l.stats && <div className="muted listing-stats">{l.stats}</div>}
+            <div className="muted listing-stats">{statsString(l.machine_id, l.data)}</div>
+            <div className="listing-meta">{[l.area, l.casino].filter(Boolean).join(' · ')}</div>
           </button>
         ))
       )}
@@ -52,51 +89,73 @@ export default function Marketplace({ session }) {
   )
 }
 
-function PostForm({ session, onPosted }) {
-  const [machineName, setMachineName] = useState(MACHINES[0]?.name || '')
-  const [stats, setStats] = useState('')
-  const [price, setPrice] = useState('')
+function PostFlow({ session, onDone, onCancel }) {
+  const [machine, setMachine] = useState(null)
+  const [values, setValues] = useState({})
+  const [area, setArea] = useState('')
+  const [casino, setCasino] = useState('')
   const [busy, setBusy] = useState(false)
 
+  if (!machine) {
+    return (
+      <div>
+        <button className="linkbtn" onClick={onCancel}>‹ Marketplace</button>
+        <h2 className="screen-title">Post a play — pick a machine</h2>
+        <div className="machine-list">
+          {sortedMachines.map((m) => (
+            <button key={m.id} className="machine-item" onClick={() => { setMachine(m); setValues({}) }}>
+              <span>{m.name}</span>
+              <span className="chev">›</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const set = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }))
+  const allFields = [...COMMON_FIELDS, ...machine.fields]
+
   const post = async () => {
-    if (!machineName) return
+    if (!area) { alert('Pick an area'); return }
     setBusy(true)
     const { error } = await supabase.from('listings').insert({
       user_id: session.user.id,
-      machine_name: machineName,
-      stats,
-      price_usd: Number(price) || 0,
+      machine_id: machine.id,
+      machine_name: machine.name,
+      data: values,
+      area,
+      casino,
     })
     setBusy(false)
     if (error) { alert(error.message); return }
-    onPosted()
+    onDone()
   }
 
   return (
-    <div className="form card">
-      <label className="field">
-        <span className="field-label">Machine</span>
-        <select className="input" value={machineName} onChange={(e) => setMachineName(e.target.value)}>
-          {MACHINES.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
-        </select>
-      </label>
-      <label className="field">
-        <span className="field-label">Stats</span>
-        <textarea
-          className="input"
-          rows={3}
-          value={stats}
-          onChange={(e) => setStats(e.target.value)}
-          placeholder="e.g. must-hit-by $1,200 — current meter $980"
-        />
-      </label>
-      <label className="field">
-        <span className="field-label">Asking price ($)</span>
-        <input className="input" type="number" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
-      </label>
-      <button className="btn primary block" onClick={post} disabled={busy}>
-        {busy ? 'Posting…' : 'Post play'}
-      </button>
+    <div>
+      <button className="linkbtn" onClick={() => setMachine(null)}>‹ Machines</button>
+      <h2 className="screen-title">{machine.name}</h2>
+      <div className="form">
+        {allFields.map((f) => (
+          <Field key={f.key} f={f} value={values[f.key]} onChange={set(f.key)} />
+        ))}
+        <label className="field">
+          <span className="field-label">Area</span>
+          <select className="input" value={area} onChange={(e) => setArea(e.target.value)}>
+            <option value="" disabled>Select area…</option>
+            {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span className="field-label">Casino</span>
+          <input className="input" value={casino} onChange={(e) => setCasino(e.target.value)} />
+        </label>
+        <button className="btn primary block" onClick={post} disabled={busy}>
+          {busy ? 'Posting…' : 'Post play'}
+        </button>
+        <p className="muted note">Posted plays expire after 2 hours.</p>
+      </div>
     </div>
   )
 }
@@ -122,9 +181,7 @@ function Chat({ listing, session, onBack }) {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `listing_id=eq.${listing.id}` },
-        (payload) => {
-          setMessages((m) => (m.some((x) => x.id === payload.new.id) ? m : [...m, payload.new]))
-        }
+        (payload) => setMessages((m) => (m.some((x) => x.id === payload.new.id) ? m : [...m, payload.new]))
       )
       .subscribe()
     return () => supabase.removeChannel(ch)
@@ -143,7 +200,7 @@ function Chat({ listing, session, onBack }) {
       body: text,
     })
     if (error) { alert(error.message); return }
-    load() // works even if realtime isn't enabled
+    load()
   }
 
   return (
@@ -151,9 +208,10 @@ function Chat({ listing, session, onBack }) {
       <button className="linkbtn" onClick={onBack}>‹ Marketplace</button>
       <div className="chat-head">
         <span className="listing-title">{listing.machine_name}</span>
-        <span className="price">${Number(listing.price_usd).toFixed(2)}</span>
+        <span className="time-left">{timeLeft(listing.expires_at)}</span>
       </div>
-      {listing.stats && <p className="muted">{listing.stats}</p>}
+      <p className="muted">{statsString(listing.machine_id, listing.data)}</p>
+      <p className="muted listing-meta">{[listing.area, listing.casino].filter(Boolean).join(' · ')}</p>
 
       <div className="messages">
         {messages.length === 0 && <div className="empty small">No messages yet. Start negotiating.</div>}
