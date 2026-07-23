@@ -35,15 +35,11 @@ export default function Results() {
   if (loading) return <p className="muted">Loading…</p>
   if (rows.length === 0)
     return (
-      <div>
-        <h2 className="screen-title">Results</h2>
-        <div className="empty">No plays tracked yet. Add one from the Tracking tab.</div>
-      </div>
+      <div className="empty">No plays tracked yet. Add one from the Tracking tab.</div>
     )
 
   return (
     <div>
-      <h2 className="screen-title">Results</h2>
       <table className="results">
         <thead>
           <tr>

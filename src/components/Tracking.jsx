@@ -15,7 +15,6 @@ export default function Tracking({ session }) {
   if (!machine) {
     return (
       <div>
-        <h2 className="screen-title">Pick a machine</h2>
         {flash && <div className="flash">{flash}</div>}
         <div className="machine-list">
           {sortedMachines.map((m) => (

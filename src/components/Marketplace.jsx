@@ -33,6 +33,8 @@ export default function Marketplace({ session }) {
   const [chatListing, setChatListing] = useState(null)
   const [listings, setListings] = useState([])
   const [area, setArea] = useState('')
+  const [minSpin, setMinSpin] = useState('')
+  const [maxSpin, setMaxSpin] = useState('')
   const [loading, setLoading] = useState(true)
 
   const load = async () => {
@@ -43,11 +45,16 @@ export default function Marketplace({ session }) {
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false })
     if (area) q = q.eq('area', area)
+    if (minSpin !== '') q = q.gte('spin', Number(minSpin))
+    if (maxSpin !== '') q = q.lte('spin', Number(maxSpin))
     const { data } = await q
     setListings(data || [])
     setLoading(false)
   }
-  useEffect(() => { load() }, [area])
+  useEffect(() => {
+    const t = setTimeout(load, 250)
+    return () => clearTimeout(t)
+  }, [area, minSpin, maxSpin])
 
   if (view === 'post')
     return <PostFlow session={session} onDone={() => { setView('list'); load() }} onCancel={() => setView('list')} />
@@ -61,13 +68,45 @@ export default function Marketplace({ session }) {
         <button className="btn primary small" onClick={() => setView('post')}>+ Post play</button>
       </div>
 
-      <label className="field">
-        <span className="field-label">Filter by area</span>
-        <select className="input" value={area} onChange={(e) => setArea(e.target.value)}>
-          <option value="">All areas</option>
-          {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
-        </select>
-      </label>
+      <div className="filters">
+        <label className="field">
+          <span className="field-label">Area</span>
+          <select className="input" value={area} onChange={(e) => setArea(e.target.value)}>
+            <option value="">All areas</option>
+            {AREAS.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </label>
+        <div className="filter-row">
+          <label className="field">
+            <span className="field-label">Min $/Spin</span>
+            <input
+              className="input"
+              type="number"
+              inputMode="decimal"
+              value={minSpin}
+              onChange={(e) => setMinSpin(e.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span className="field-label">Max $/Spin</span>
+            <input
+              className="input"
+              type="number"
+              inputMode="decimal"
+              value={maxSpin}
+              onChange={(e) => setMaxSpin(e.target.value)}
+            />
+          </label>
+        </div>
+        {(area || minSpin !== '' || maxSpin !== '') && (
+          <button
+            className="linkbtn"
+            onClick={() => { setArea(''); setMinSpin(''); setMaxSpin('') }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
 
       {loading ? (
         <p className="muted">Loading…</p>
@@ -124,6 +163,7 @@ function PostFlow({ session, onDone, onCancel }) {
       machine_id: machine.id,
       machine_name: machine.name,
       data: values,
+      spin: Number(values.spin) || null,
       area,
       casino,
     })

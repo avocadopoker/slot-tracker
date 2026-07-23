@@ -38,13 +38,6 @@ export default function App() {
         <button className="linkbtn" onClick={() => supabase.auth.signOut()}>Sign out</button>
       </header>
 
-      <main className="content">
-        {tab === 'tracking' && <Tracking session={session} />}
-        {tab === 'results' && <Results session={session} />}
-        {tab === 'marketplace' && <Marketplace session={session} />}
-        {tab === 'settings' && <Settings session={session} />}
-      </main>
-
       <nav className="tabbar">
         {TABS.map((t) => (
           <button
@@ -56,6 +49,13 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      <main className="content">
+        {tab === 'tracking' && <Tracking session={session} />}
+        {tab === 'results' && <Results session={session} />}
+        {tab === 'marketplace' && <Marketplace session={session} />}
+        {tab === 'settings' && <Settings session={session} />}
+      </main>
     </div>
   )
 }
