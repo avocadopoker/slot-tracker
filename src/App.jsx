@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Auth from './components/Auth'
+import Guide from './components/Guide'
 import Tracking from './components/Tracking'
 import Results from './components/Results'
 import Marketplace from './components/Marketplace'
@@ -8,16 +9,17 @@ import Settings from './components/Settings'
 import './styles.css'
 
 const TABS = [
-  { id: 'tracking', label: 'Tracking' },
+  { id: 'guide', label: 'Guide' },
+  { id: 'sell', label: 'Sell' },
+  { id: 'tracking', label: 'Track' },
   { id: 'results', label: 'Results' },
-  { id: 'marketplace', label: 'Market' },
   { id: 'settings', label: 'Settings' },
 ]
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('tracking')
+  const [tab, setTab] = useState('guide')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -51,9 +53,10 @@ export default function App() {
       </nav>
 
       <main className="content">
+        {tab === 'guide' && <Guide />}
+        {tab === 'sell' && <Marketplace session={session} />}
         {tab === 'tracking' && <Tracking session={session} />}
         {tab === 'results' && <Results session={session} />}
-        {tab === 'marketplace' && <Marketplace session={session} />}
         {tab === 'settings' && <Settings session={session} />}
       </main>
     </div>

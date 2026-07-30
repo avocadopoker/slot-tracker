@@ -64,8 +64,8 @@ export default function Marketplace({ session }) {
   return (
     <div>
       <div className="row-between">
-        <h2 className="screen-title">Marketplace</h2>
-        <button className="btn primary small" onClick={() => setView('post')}>+ Post play</button>
+        <h2 className="screen-title">Sell to Slotly</h2>
+        <button className="btn primary small" onClick={() => setView('post')}>+ Sell a play</button>
       </div>
 
       <div className="filters">
@@ -138,8 +138,8 @@ function PostFlow({ session, onDone, onCancel }) {
   if (!machine) {
     return (
       <div>
-        <button className="linkbtn" onClick={onCancel}>‹ Marketplace</button>
-        <h2 className="screen-title">Post a play — pick a machine</h2>
+        <button className="linkbtn" onClick={onCancel}>‹ Sell</button>
+        <h2 className="screen-title">Sell a play — pick a machine</h2>
         <div className="machine-list">
           {sortedMachines.map((m) => (
             <button key={m.id} className="machine-item" onClick={() => { setMachine(m); setValues({}) }}>
@@ -194,7 +194,7 @@ function PostFlow({ session, onDone, onCancel }) {
         <button className="btn primary block" onClick={post} disabled={busy}>
           {busy ? 'Posting…' : 'Post play'}
         </button>
-        <p className="muted note">Posted plays expire after 2 hours.</p>
+        <p className="muted note">Slotly buys your play and redistributes it to APs in the area. Listings expire after 2 hours.</p>
       </div>
     </div>
   )
@@ -245,7 +245,7 @@ function Chat({ listing, session, onBack }) {
 
   return (
     <div className="chat">
-      <button className="linkbtn" onClick={onBack}>‹ Marketplace</button>
+      <button className="linkbtn" onClick={onBack}>‹ Sell</button>
       <div className="chat-head">
         <span className="listing-title">{listing.machine_name}</span>
         <span className="time-left">{timeLeft(listing.expires_at)}</span>
