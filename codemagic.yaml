@@ -28,10 +28,13 @@ workflows:
             npx cap add ios
           fi
           npx cap sync ios
-      - name: Set bundle id & signing
+      - name: Set up code signing (auto fetch + create)
         script: |
-          cd ios/App
-          # Codemagic auto-configures signing from the App Store Connect integration
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
           xcode-project use-profiles
       - name: Increment build number
         script: |
