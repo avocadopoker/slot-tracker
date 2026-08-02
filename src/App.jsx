@@ -1,25 +1,26 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Auth from './components/Auth'
-import Guide from './components/Guide'
-import Tracking from './components/Tracking'
-import Results from './components/Results'
-import Marketplace from './components/Marketplace'
+import Slots from './components/Slots'
+import TableGames from './components/TableGames'
+import Sportsbook from './components/Sportsbook'
+import Poker from './components/Poker'
 import Settings from './components/Settings'
 import './styles.css'
 
-const TABS = [
-  { id: 'guide', label: 'Guide' },
-  { id: 'sell', label: 'Sell' },
-  { id: 'tracking', label: 'Track' },
-  { id: 'results', label: 'Results' },
-  { id: 'settings', label: 'Settings' },
+const CATEGORIES = [
+  { id: 'slots', label: 'Slots' },
+  { id: 'tables', label: 'Table games' },
+  { id: 'sportsbook', label: 'Sportsbook' },
+  { id: 'poker', label: 'Poker' },
 ]
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('guide')
+  const [cat, setCat] = useState('slots')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -36,29 +37,54 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">SLOT<span className="brand-dim">TRACKER</span></span>
-        <button className="linkbtn" onClick={() => supabase.auth.signOut()}>Sign out</button>
+        <span className="brand">AP<span className="brand-dim">PLANET</span></span>
+        <div className="menu-wrap">
+          <button className="menu-btn" onClick={() => setMenuOpen((o) => !o)} aria-label="Menu">⋯</button>
+          {menuOpen && (
+            <>
+              <div className="menu-backdrop" onClick={() => setMenuOpen(false)} />
+              <div className="menu">
+                <button className="menu-item" onClick={() => { setSettingsOpen(true); setMenuOpen(false) }}>
+                  Settings
+                </button>
+                <button className="menu-item" onClick={() => supabase.auth.signOut()}>
+                  Sign out
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
-      <nav className="tabbar">
-        {TABS.map((t) => (
+      <nav className="tabbar cats">
+        {CATEGORIES.map((c) => (
           <button
-            key={t.id}
-            className={`tab ${tab === t.id ? 'active' : ''}`}
-            onClick={() => setTab(t.id)}
+            key={c.id}
+            className={`tab ${cat === c.id ? 'active' : ''}`}
+            onClick={() => setCat(c.id)}
           >
-            {t.label}
+            {c.label}
           </button>
         ))}
       </nav>
 
       <main className="content">
-        {tab === 'guide' && <Guide />}
-        {tab === 'sell' && <Marketplace session={session} />}
-        {tab === 'tracking' && <Tracking session={session} />}
-        {tab === 'results' && <Results session={session} />}
-        {tab === 'settings' && <Settings session={session} />}
+        {cat === 'slots' && <Slots session={session} />}
+        {cat === 'tables' && <TableGames session={session} />}
+        {cat === 'sportsbook' && <Sportsbook session={session} />}
+        {cat === 'poker' && <Poker session={session} />}
       </main>
+
+      {settingsOpen && (
+        <div className="overlay">
+          <div className="overlay-bar">
+            <button className="linkbtn" onClick={() => setSettingsOpen(false)}>‹ Back</button>
+          </div>
+          <div className="overlay-body">
+            <Settings session={session} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

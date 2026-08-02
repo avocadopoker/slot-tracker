@@ -25,7 +25,7 @@ export default function Auth() {
   return (
     <div className="auth">
       <div className="auth-card">
-        <div className="auth-brand">SLOT<span className="brand-dim">TRACKER</span></div>
+        <div className="auth-brand">AP<span className="brand-dim">PLANET</span></div>
         <p className="muted">{mode === 'login' ? 'Log in to continue' : 'Create your account'}</p>
 
         <input

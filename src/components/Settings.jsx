@@ -1,5 +1,3 @@
-import { supabase } from '../supabaseClient'
-
 export default function Settings({ session }) {
   return (
     <div>
@@ -11,9 +9,6 @@ export default function Settings({ session }) {
         </div>
       </div>
       <div className="empty small">More settings coming soon.</div>
-      <button className="btn ghost block" onClick={() => supabase.auth.signOut()}>
-        Sign out
-      </button>
     </div>
   )
 }
