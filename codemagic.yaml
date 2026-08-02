@@ -32,6 +32,11 @@ workflows:
           fi
       - name: Sync Capacitor iOS
         script: npx cap sync ios
+      - name: Mark app as encryption-exempt (skips Missing Compliance)
+        script: |
+          PLIST=ios/App/App/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" \
+            || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST" 
       - name: Install CocoaPods (only if this project uses them)
         script: |
           if [ -f ios/App/Podfile ]; then
