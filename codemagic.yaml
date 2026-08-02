@@ -3,7 +3,7 @@ workflows:
     name: AP Planet iOS
     max_build_duration: 60
     integrations:
-      app_store_connect: codemagic_app_store   # name of the API key you add in Codemagic (Teams/Personal > Integrations)
+      app_store_connect: Codemagic   # existing Apple API key (Key ID 366UQW583L), reused from other apps
     environment:
       groups:
         - supabase            # variable group holding your Supabase keys (create in Codemagic)
