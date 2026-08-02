@@ -1,64 +1,72 @@
 workflows:
-  ios-testflight:
+  ios-applanet:
     name: AP Planet iOS
     max_build_duration: 60
+    instance_type: mac_mini_m2
     integrations:
-      app_store_connect: Codemagic   # existing Apple API key (Key ID 366UQW583L), reused from other apps
+      app_store_connect: Codemagic
     environment:
       groups:
-        - supabase            # variable group holding your Supabase keys (create in Codemagic)
+        - iOS_signing_applanet
+        - supabase
       vars:
         BUNDLE_ID: "com.applanet.app"
-        APP_STORE_APPLE_ID: 6797276658          # <-- replace with the Apple ID number of your app record
-      node: 20
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+      node: 22
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Install npm dependencies
-        script: npm ci
+      - name: Install dependencies
+        script: npm install
       - name: Build web app
         script: |
-          # Supabase creds come from the "supabase" variable group
           echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" > .env
           echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env
           npm run build
-      - name: Generate iOS project (Capacitor)
+      - name: Add iOS platform (first build only)
         script: |
           if [ ! -d "ios" ]; then
             npx cap add ios
           fi
-          npx cap sync ios
-      - name: Set up code signing (create fresh cert + profile)
+      - name: Sync Capacitor iOS
+        script: npx cap sync ios
+      - name: Install CocoaPods (only if this project uses them)
+        script: |
+          if [ -f ios/App/Podfile ]; then
+            echo "Podfile found - running pod install"
+            cd ios/App && pod install
+          else
+            echo "No Podfile - project uses Swift Package Manager, skipping"
+          fi
+      - name: Set up code signing from stored certificate and profile
         script: |
           keychain initialize
-          # Create a new distribution certificate Codemagic fully owns (private key included)
-          app-store-connect create-certificate \
-            --type IOS_DISTRIBUTION \
-            --save
-          # Create the provisioning profile for this bundle id
-          app-store-connect create-profile \
-            "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --save || true
-          # Pull everything together and apply to the Xcode project
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create
-          keychain add-certificates
+          echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
+          keychain add-certificates \
+            --certificate /tmp/certificate.p12 \
+            --certificate-password $CM_CERTIFICATE_PASSWORD
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo $CM_PROVISIONING_PROFILE | base64 --decode \
+            > ~/Library/MobileDevice/Provisioning\ Profiles/applanet.mobileprovision
           xcode-project use-profiles
-      - name: Increment build number
+      - name: Set build number
         script: |
           cd ios/App
-          # Use Codemagic's build number so each upload is unique
-          agvtool new-version -all "$BUILD_NUMBER" || true
+          agvtool new-version -all $PROJECT_BUILD_NUMBER
       - name: Build ipa
         script: |
-          cd ios/App
-          xcode-project build-ipa \
-            --workspace "App.xcworkspace" \
-            --scheme "App"
+          if [ -d "$XCODE_WORKSPACE" ]; then
+            echo "Building from workspace (CocoaPods)"
+            xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+          else
+            echo "Building from project (SPM)"
+            xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
         auth: integration
