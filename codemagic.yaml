@@ -28,9 +28,19 @@ workflows:
             npx cap add ios
           fi
           npx cap sync ios
-      - name: Set up code signing (auto fetch + create)
+      - name: Set up code signing (create fresh cert + profile)
         script: |
           keychain initialize
+          # Create a new distribution certificate Codemagic fully owns (private key included)
+          app-store-connect create-certificate \
+            --type IOS_DISTRIBUTION \
+            --save
+          # Create the provisioning profile for this bundle id
+          app-store-connect create-profile \
+            "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --save || true
+          # Pull everything together and apply to the Xcode project
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
