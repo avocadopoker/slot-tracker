@@ -4,12 +4,9 @@ import { MACHINES, COMMON_FIELDS, AREAS } from '../machines'
 import Field from './Field'
 
 const sortedMachines = [...MACHINES].sort((a, b) => a.name.localeCompare(b.name))
-const machineById = Object.fromEntries(MACHINES.map((m) => [m.id, m]))
 
-function statsString(machineId, data) {
-  const m = machineById[machineId]
-  if (!m) return ''
-  return [...COMMON_FIELDS, ...m.fields]
+function statsString(data) {
+  return COMMON_FIELDS
     .map((f) => {
       const v = data?.[f.key]
       if (v === undefined || v === null || v === '') return null
@@ -79,30 +76,15 @@ export default function Marketplace({ session }) {
         <div className="filter-row">
           <label className="field">
             <span className="field-label">Min $/Spin</span>
-            <input
-              className="input"
-              type="number"
-              inputMode="decimal"
-              value={minSpin}
-              onChange={(e) => setMinSpin(e.target.value)}
-            />
+            <input className="input" type="number" inputMode="decimal" value={minSpin} onChange={(e) => setMinSpin(e.target.value)} />
           </label>
           <label className="field">
             <span className="field-label">Max $/Spin</span>
-            <input
-              className="input"
-              type="number"
-              inputMode="decimal"
-              value={maxSpin}
-              onChange={(e) => setMaxSpin(e.target.value)}
-            />
+            <input className="input" type="number" inputMode="decimal" value={maxSpin} onChange={(e) => setMaxSpin(e.target.value)} />
           </label>
         </div>
         {(area || minSpin !== '' || maxSpin !== '') && (
-          <button
-            className="linkbtn"
-            onClick={() => { setArea(''); setMinSpin(''); setMaxSpin('') }}
-          >
+          <button className="linkbtn" onClick={() => { setArea(''); setMinSpin(''); setMaxSpin('') }}>
             Clear filters
           </button>
         )}
@@ -119,7 +101,7 @@ export default function Marketplace({ session }) {
               <span className="listing-title">{l.machine_name}</span>
               <span className="time-left">{timeLeft(l.expires_at)}</span>
             </div>
-            <div className="muted listing-stats">{statsString(l.machine_id, l.data)}</div>
+            <div className="muted listing-stats">{statsString(l.data)}</div>
             <div className="listing-meta">{[l.area, l.casino].filter(Boolean).join(' · ')}</div>
           </button>
         ))
@@ -153,7 +135,6 @@ function PostFlow({ session, onDone, onCancel }) {
   }
 
   const set = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }))
-  const allFields = [...COMMON_FIELDS, ...machine.fields]
 
   const post = async () => {
     if (!area) { alert('Pick an area'); return }
@@ -177,7 +158,7 @@ function PostFlow({ session, onDone, onCancel }) {
       <button className="linkbtn" onClick={() => setMachine(null)}>‹ Machines</button>
       <h2 className="screen-title">{machine.name}</h2>
       <div className="form">
-        {allFields.map((f) => (
+        {COMMON_FIELDS.map((f) => (
           <Field key={f.key} f={f} value={values[f.key]} onChange={set(f.key)} />
         ))}
         <label className="field">
@@ -250,7 +231,7 @@ function Chat({ listing, session, onBack }) {
         <span className="listing-title">{listing.machine_name}</span>
         <span className="time-left">{timeLeft(listing.expires_at)}</span>
       </div>
-      <p className="muted">{statsString(listing.machine_id, listing.data)}</p>
+      <p className="muted">{statsString(listing.data)}</p>
       <p className="muted listing-meta">{[listing.area, listing.casino].filter(Boolean).join(' · ')}</p>
 
       <div className="messages">

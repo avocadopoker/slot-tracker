@@ -1,76 +1,42 @@
 // ============================================================
 // SLOT MACHINE CONFIG  (developer edits this file — users never see it)
 //
-// COMMON_FIELDS are shown on top of EVERY game: $-In, $-Out, $/Spin.
+// Every game uses the SAME four fields, in this order:
+//   $-In, $/Spin, Play (free text — user's own note per entry), $-Out
+// $-Out is last since it's the one filled in last, when cashing out.
+//
 //   $ result  = $-Out - $-In
-//   Units     = $ result / $/Spin   (computed automatically)
+//   Units     = $ result / $-per-spin   (computed automatically)
 //
-// Each machine below adds its own fields under the common three.
+// "Play" is free text — the user writes whatever they want per entry
+// (e.g. "must-hit 900", "green bonus", anything). The Database screen
+// later lists the different values users have typed, per game.
 //
-// Field types:
-//   'number'  -> numeric input
-//   'text'    -> text input
-//   'select'  -> dropdown; needs an `options` array
-//
-// To add a game: copy a { ... } block, change the values, save, push.
-// The game list is sorted alphabetically automatically.
+// To add a game: add a line to MACHINES below with a unique id and a
+// display name. The list is sorted alphabetically automatically.
 // ============================================================
 
 export const COMMON_FIELDS = [
   { key: 'in',   label: '$-In',   type: 'number' },
-  { key: 'out',  label: '$-Out',  type: 'number' },
   { key: 'spin', label: '$/Spin', type: 'number' },
+  { key: 'play', label: 'Play',   type: 'text' },
+  { key: 'out',  label: '$-Out',  type: 'number' },
 ]
 
 export const MACHINES = [
-  { id: 'buffalo-instant-hit', name: 'Buffalo Instant Hit', fields: [
-    { key: 'play', label: 'Play', type: 'select', options: ['2/1', '1/2', '1/1'] },
-  ]},
-  { id: 'buffalo-link', name: 'Buffalo Link', fields: [
-    { key: 'entry', label: 'Entry', type: 'number' },
-  ]},
-  { id: 'frankenstein', name: 'Frankenstein', fields: [
-    { key: 'entry', label: 'Entry', type: 'number' },
-  ]},
-  { id: 'frankenstein-wheel', name: 'Frankenstein Wheel', fields: [
-    { key: 'entry', label: 'Entry', type: 'number' },
-  ]},
-  { id: 'lightning-storm', name: 'Lightning Storm', fields: [
-    { key: 'entry', label: 'Entry', type: 'number' },
-  ]},
-  { id: 'magic-rockets', name: 'Magic Rockets', fields: [
-    { key: 'play',   label: 'Play',   type: 'select', options: ['GREEN/YELLOW', 'GREEN', 'YELLOW'] },
-    { key: 'green',  label: 'Green',  type: 'number' },
-    { key: 'yellow', label: 'Yellow', type: 'number' },
-  ]},
-  { id: 'magic-treasures', name: 'Magic Treasures', fields: [
-    { key: 'balls', label: 'Balls', type: 'number' },
-  ]},
-  { id: 'magic-treasures-gold', name: 'Magic Treasures Gold', fields: [
-    { key: 'play',  label: 'Play',  type: 'select', options: ['GREEN', 'PURPLE', 'GP'] },
-    { key: 'value', label: 'Value', type: 'number' },
-  ]},
-  { id: 'phoenix-link', name: 'Phoenix Link', fields: [
-    { key: 'entry', label: 'Entry', type: 'number' },
-  ]},
-  { id: 'regal-link', name: 'Regal Link', fields: [
-    { key: 'play',  label: 'Play',  type: 'select', options: ['#', 'AMBER', 'SAPHIRE', 'PURPLE', 'AS'] },
-    { key: 'value', label: 'Value', type: 'number' },
-  ]},
-  { id: 'regal-riches', name: 'Regal Riches', fields: [
-    { key: 'play',  label: 'Play',  type: 'select', options: ['#', 'PURPLE', 'GREEN', 'YELLOW', 'TOTAL'] },
-    { key: 'value', label: 'Value', type: 'number' },
-  ]},
-  { id: 'wof-highroller', name: 'WOF Highroller', fields: [
-    { key: 'ways', label: 'Ways', type: 'number' },
-    { key: 'type', label: 'Type', type: 'select', options: ['1/5 4x', '1/5 5x', '1/5 ?', '2/4 2x', '3?', 'WAYS'] },
-  ]},
-  { id: 'wolf-run-eclipse', name: 'Wolf Run Eclipse', fields: [
-    { key: 'play',  label: 'Play',  type: 'select', options: ['MINOR/MINI', 'MINOR', 'MINI'] },
-    { key: 'major', label: 'Major', type: 'number' },
-    { key: 'minor', label: 'Minor', type: 'number' },
-    { key: 'mini',  label: 'Mini',  type: 'number' },
-  ]},
+  { id: 'buffalo-instant-hit', name: 'Buffalo Instant Hit' },
+  { id: 'buffalo-link', name: 'Buffalo Link' },
+  { id: 'frankenstein', name: 'Frankenstein' },
+  { id: 'frankenstein-wheel', name: 'Frankenstein Wheel' },
+  { id: 'lightning-storm', name: 'Lightning Storm' },
+  { id: 'magic-rockets', name: 'Magic Rockets' },
+  { id: 'magic-treasures', name: 'Magic Treasures' },
+  { id: 'magic-treasures-gold', name: 'Magic Treasures Gold' },
+  { id: 'phoenix-link', name: 'Phoenix Link' },
+  { id: 'regal-link', name: 'Regal Link' },
+  { id: 'regal-riches', name: 'Regal Riches' },
+  { id: 'wof-highroller', name: 'WOF Highroller' },
+  { id: 'wolf-run-eclipse', name: 'Wolf Run Eclipse' },
 ]
 
 // Bigger geographic areas for the marketplace (seed more here as needed)

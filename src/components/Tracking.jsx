@@ -32,9 +32,8 @@ export default function Tracking({ session }) {
     )
   }
 
-  // Step 2: common fields + machine-specific fields
+  // Step 2: the 4 universal fields — $-In, $/Spin, Play, $-Out (in that order)
   const set = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }))
-  const allFields = [...COMMON_FIELDS, ...machine.fields]
 
   const addPlay = async () => {
     setBusy(true)
@@ -63,7 +62,7 @@ export default function Tracking({ session }) {
       <button className="linkbtn" onClick={() => { setMachine(null); setValues({}) }}>‹ Machines</button>
       <h2 className="screen-title">{machine.name}</h2>
       <div className="form">
-        {allFields.map((f) => (
+        {COMMON_FIELDS.map((f) => (
           <Field key={f.key} f={f} value={values[f.key]} onChange={set(f.key)} />
         ))}
         <button className="btn primary block" onClick={addPlay} disabled={busy}>
