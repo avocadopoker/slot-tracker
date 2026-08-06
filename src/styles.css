@@ -43,6 +43,7 @@ html, body, #root {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
+  padding-top: calc(16px + env(safe-area-inset-top));
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
@@ -60,7 +61,7 @@ html, body, #root {
 .content { flex: 1; padding: 16px; padding-bottom: 32px; }
 .screen-title { font-size: 22px; font-weight: 800; margin: 4px 0 18px; }
 
-/* ---------- Top tab bar ---------- */
+/* ---------- Top tab bar (categories) ---------- */
 .tabbar {
   position: sticky;
   top: 57px;
@@ -152,6 +153,7 @@ html, body, #root {
 }
 .machine-item:active { background: var(--red-tint); border-color: var(--red); }
 .chev { color: var(--red); font-size: 20px; }
+.guide-count { color: var(--muted); font-size: 14px; font-weight: 600; }
 
 .flash {
   background: var(--red-tint);
@@ -164,7 +166,7 @@ html, body, #root {
   font-weight: 600;
 }
 
-/* ---------- Results table ---------- */
+/* ---------- Results / Database table ---------- */
 .results { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .results th, .results td { padding: 12px 8px; border-bottom: 1px solid var(--border); text-align: right; }
 .results th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -223,21 +225,7 @@ html, body, #root {
 .composer { display: flex; gap: 8px; padding-top: 8px; }
 .composer .input { flex: 1; }
 
-/* ---------- Misc ---------- */
-.empty {
-  color: var(--muted);
-  background: var(--surface);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  padding: 24px 16px;
-  text-align: center;
-  font-size: 14px;
-}
-.empty.small { padding: 14px; margin: 12px 0; }
-.setting-row { display: flex; justify-content: space-between; align-items: center; }
-
 /* ---------- Guide ---------- */
-.guide-count { color: var(--muted); font-size: 14px; font-weight: 600; }
 .play-card {
   background: #fff;
   border: 1px solid var(--border);
@@ -331,9 +319,22 @@ html, body, #root {
   display: flex;
   flex-direction: column;
 }
-.overlay-bar { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.overlay-bar { padding: 14px 16px; border-bottom: 1px solid var(--border); padding-top: calc(14px + env(safe-area-inset-top)); }
 .overlay-body { padding: 16px; overflow-y: auto; }
 
 /* ---------- Placeholder ---------- */
 .placeholder { padding: 40px 20px; }
 .placeholder-title { font-weight: 800; font-size: 18px; color: var(--text); margin-bottom: 6px; }
+
+/* ---------- Misc ---------- */
+.empty {
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 14px;
+}
+.empty.small { padding: 14px; margin: 12px 0; }
+.setting-row { display: flex; justify-content: space-between; align-items: center; }
