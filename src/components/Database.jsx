@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { COMMON_FIELDS } from '../machines'
+import Field from './Field'
 
 const fmt = (n) => {
   const r = Math.round(n * 100) / 100
@@ -35,7 +37,7 @@ export default function Database() {
   }
 
   if (openMachine) {
-    return <GameEntries machine={openMachine} onBack={() => setOpenMachine(null)} />
+    return <GameEntries machine={openMachine} onBack={() => { setOpenMachine(null); loadOverview() }} />
   }
 
   if (loading) return <p className="muted">Loading…</p>
@@ -84,20 +86,55 @@ function GameEntries({ machine, onBack }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editValues, setEditValues] = useState({})
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from('plays')
-        .select('*')
-        .eq('machine_id', machine.id)
-        .order('created_at', { ascending: false })
-      setEntries(data || [])
-      setLoading(false)
-    })()
-  }, [machine.id])
+  const load = async () => {
+    setLoading(true)
+    const { data } = await supabase
+      .from('plays')
+      .select('*')
+      .eq('machine_id', machine.id)
+      .order('created_at', { ascending: false })
+    setEntries(data || [])
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [machine.id])
 
   const filtered = entries.filter((e) => matchesFilter(e.data?.play, filter))
+
+  const startEdit = (entry) => {
+    setEditingId(entry.id)
+    setEditValues({ ...entry.data })
+  }
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditValues({})
+  }
+  const setField = (key) => (e) => setEditValues((v) => ({ ...v, [key]: e.target.value }))
+
+  const saveEdit = async (entryId) => {
+    setSaving(true)
+    const inV = Number(editValues.in) || 0
+    const outV = Number(editValues.out) || 0
+    const spin = Number(editValues.spin) || 0
+    const dollars = outV - inV
+    const units = spin ? dollars / spin : 0
+    const { error } = await supabase
+      .from('plays')
+      .update({
+        data: editValues,
+        result_units: units,
+        result_dollars: dollars,
+      })
+      .eq('id', entryId)
+    setSaving(false)
+    if (error) { alert(error.message); return }
+    setEditingId(null)
+    setEditValues({})
+    load()
+  }
 
   return (
     <div>
@@ -118,10 +155,33 @@ function GameEntries({ machine, onBack }) {
         <div className="empty">No entries match.</div>
       ) : (
         filtered.map((e) => {
+          const isEditing = editingId === e.id
+
+          if (isEditing) {
+            return (
+              <div key={e.id} className="play-card">
+                <div className="form">
+                  {COMMON_FIELDS.map((f) => (
+                    <Field key={f.key} f={f} value={editValues[f.key]} onChange={setField(f.key)} />
+                  ))}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn primary" onClick={() => saveEdit(e.id)} disabled={saving}>
+                      {saving ? 'Saving…' : 'Save'}
+                    </button>
+                    <button className="btn ghost" onClick={cancelEdit} disabled={saving}>Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
           const d = e.data || {}
           return (
             <div key={e.id} className="play-card">
-              {d.play && <div className="play-name">{d.play}</div>}
+              <div className="row-between" style={{ marginBottom: d.play ? 0 : 4 }}>
+                {d.play && <div className="play-name">{d.play}</div>}
+                <button className="linkbtn" onClick={() => startEdit(e)}>Edit</button>
+              </div>
               <div className="play-row">
                 <span className="play-label">$-In</span>
                 <span className="play-value">{d.in ?? '—'}</span>
