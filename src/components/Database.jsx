@@ -43,6 +43,11 @@ export default function Database() {
   if (loading) return <p className="muted">Loading…</p>
   if (rows.length === 0) return <div className="empty">No plays tracked yet. Add one from the Tracking tab.</div>
 
+  const total = rows.reduce(
+    (acc, r) => ({ entries: acc.entries + r.entries, units: acc.units + r.units, dollars: acc.dollars + r.dollars }),
+    { entries: 0, units: 0, dollars: 0 }
+  )
+
   return (
     <div>
       <table className="results">
@@ -52,15 +57,24 @@ export default function Database() {
             <th>#</th>
             <th>Units</th>
             <th>$$$</th>
+            <th aria-hidden="true"></th>
           </tr>
         </thead>
         <tbody>
+          <tr className="total-row">
+            <td className="left">TOTAL</td>
+            <td className="num">{total.entries}</td>
+            <td className={`num ${cls(total.units)}`}>{sign(total.units)}{fmt(total.units)}</td>
+            <td className={`num ${cls(total.dollars)}`}>{sign(total.dollars)}{fmt(total.dollars)}</td>
+            <td></td>
+          </tr>
           {rows.map((r) => (
-            <tr key={r.id} onClick={() => setOpenMachine(r)} style={{ cursor: 'pointer' }}>
+            <tr key={r.id} className="clickable-row" onClick={() => setOpenMachine(r)}>
               <td className="left">{r.name}</td>
               <td className="num">{r.entries}</td>
               <td className={`num ${cls(r.units)}`}>{sign(r.units)}{fmt(r.units)}</td>
               <td className={`num ${cls(r.dollars)}`}>{sign(r.dollars)}{fmt(r.dollars)}</td>
+              <td className="num row-chev">›</td>
             </tr>
           ))}
         </tbody>
@@ -86,7 +100,7 @@ function GameEntries({ machine, onBack }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
-  const [editingId, setEditingId] = useState(null)
+  const [editingEntry, setEditingEntry] = useState(null)
   const [editValues, setEditValues] = useState({})
   const [saving, setSaving] = useState(false)
 
@@ -105,16 +119,16 @@ function GameEntries({ machine, onBack }) {
   const filtered = entries.filter((e) => matchesFilter(e.data?.play, filter))
 
   const startEdit = (entry) => {
-    setEditingId(entry.id)
+    setEditingEntry(entry)
     setEditValues({ ...entry.data })
   }
   const cancelEdit = () => {
-    setEditingId(null)
+    setEditingEntry(null)
     setEditValues({})
   }
   const setField = (key) => (e) => setEditValues((v) => ({ ...v, [key]: e.target.value }))
 
-  const saveEdit = async (entryId) => {
+  const saveEdit = async () => {
     setSaving(true)
     const inV = Number(editValues.in) || 0
     const outV = Number(editValues.out) || 0
@@ -123,19 +137,38 @@ function GameEntries({ machine, onBack }) {
     const units = spin ? dollars / spin : 0
     const { error } = await supabase
       .from('plays')
-      .update({
-        data: editValues,
-        result_units: units,
-        result_dollars: dollars,
-      })
-      .eq('id', entryId)
+      .update({ data: editValues, result_units: units, result_dollars: dollars })
+      .eq('id', editingEntry.id)
     setSaving(false)
     if (error) { alert(error.message); return }
-    setEditingId(null)
+    setEditingEntry(null)
     setEditValues({})
     load()
   }
 
+  // ---- Editing a single entry: focused form, same style as Tracking ----
+  if (editingEntry) {
+    return (
+      <div>
+        <button className="linkbtn" onClick={cancelEdit}>‹ Entries</button>
+        <h2 className="screen-title">{editingEntry.data?.play || machine.name}</h2>
+        <div className="form">
+          {COMMON_FIELDS.map((f) => (
+            <Field key={f.key} f={f} value={editValues[f.key]} onChange={setField(f.key)} />
+          ))}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn primary" onClick={saveEdit} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button className="btn ghost" onClick={cancelEdit} disabled={saving}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ---- List of entries: same table style as the game overview,
+  // Play name instead of Game name ----
   return (
     <div>
       <button className="linkbtn" onClick={onBack}>‹ Database</button>
@@ -154,55 +187,26 @@ function GameEntries({ machine, onBack }) {
       ) : filtered.length === 0 ? (
         <div className="empty">No entries match.</div>
       ) : (
-        filtered.map((e) => {
-          const isEditing = editingId === e.id
-
-          if (isEditing) {
-            return (
-              <div key={e.id} className="play-card">
-                <div className="form">
-                  {COMMON_FIELDS.map((f) => (
-                    <Field key={f.key} f={f} value={editValues[f.key]} onChange={setField(f.key)} />
-                  ))}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="btn primary" onClick={() => saveEdit(e.id)} disabled={saving}>
-                      {saving ? 'Saving…' : 'Save'}
-                    </button>
-                    <button className="btn ghost" onClick={cancelEdit} disabled={saving}>Cancel</button>
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          const d = e.data || {}
-          return (
-            <div key={e.id} className="play-card">
-              <div className="row-between" style={{ marginBottom: d.play ? 0 : 4 }}>
-                {d.play && <div className="play-name">{d.play}</div>}
-                <button className="linkbtn" onClick={() => startEdit(e)}>Edit</button>
-              </div>
-              <div className="play-row">
-                <span className="play-label">$-In</span>
-                <span className="play-value">{d.in ?? '—'}</span>
-              </div>
-              <div className="play-row">
-                <span className="play-label">$/Spin</span>
-                <span className="play-value">{d.spin ?? '—'}</span>
-              </div>
-              <div className="play-row">
-                <span className="play-label">$-Out</span>
-                <span className="play-value">{d.out ?? '—'}</span>
-              </div>
-              <div className="play-row highlight">
-                <span className="play-label">Result</span>
-                <span className="play-value">
-                  {sign(e.result_dollars)}{fmt(e.result_dollars)} ({sign(e.result_units)}{fmt(e.result_units)} units)
-                </span>
-              </div>
-            </div>
-          )
-        })
+        <table className="results">
+          <thead>
+            <tr>
+              <th className="left">Play</th>
+              <th>Units</th>
+              <th>$$$</th>
+              <th aria-hidden="true"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((e) => (
+              <tr key={e.id} className="clickable-row" onClick={() => startEdit(e)}>
+                <td className="left">{e.data?.play || '—'}</td>
+                <td className={`num ${cls(e.result_units)}`}>{sign(e.result_units)}{fmt(e.result_units)}</td>
+                <td className={`num ${cls(e.result_dollars)}`}>{sign(e.result_dollars)}{fmt(e.result_dollars)}</td>
+                <td className="num row-chev">›</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   )

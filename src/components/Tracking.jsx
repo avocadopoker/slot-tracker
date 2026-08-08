@@ -5,6 +5,13 @@ import Field from './Field'
 
 const catalogSorted = [...MACHINES].sort((a, b) => a.name.localeCompare(b.name))
 
+const fmt = (n) => {
+  const r = Math.round(n * 100) / 100
+  return Number.isInteger(r) ? String(r) : r.toFixed(2)
+}
+const sign = (n) => (n > 0 ? '+' : '')
+const cls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : '')
+
 function slugify(name) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
@@ -15,7 +22,7 @@ export default function Tracking({ session }) {
   const [showAdd, setShowAdd] = useState(false)
   const [values, setValues] = useState({})
   const [busy, setBusy] = useState(false)
-  const [flash, setFlash] = useState('')
+  const [summary, setSummary] = useState(null) // { machineName, dollars, units }
 
   const loadUserMachines = async () => {
     const { data } = await supabase
@@ -45,6 +52,33 @@ export default function Tracking({ session }) {
     )
   }
 
+  // ---- Confirmation after adding a play ----
+  if (summary) {
+    return (
+      <div>
+        <h2 className="screen-title">Play added</h2>
+        <div className="play-card">
+          <div className="play-name">{summary.machineName}</div>
+          <div className="play-row highlight">
+            <span className="play-label">Result</span>
+            <span className="play-value">
+              {sign(summary.dollars)}{fmt(summary.dollars)}
+            </span>
+          </div>
+          <div className="play-row highlight">
+            <span className="play-label">Units</span>
+            <span className="play-value">
+              {sign(summary.units)}{fmt(summary.units)}
+            </span>
+          </div>
+        </div>
+        <button className="btn primary block" onClick={() => { setSummary(null); setMachine(null); setValues({}) }}>
+          Back to my games
+        </button>
+      </div>
+    )
+  }
+
   // ---- Step 2: entry form for a picked machine ----
   if (machine) {
     const set = (key) => (e) => setValues((v) => ({ ...v, [key]: e.target.value }))
@@ -66,9 +100,7 @@ export default function Tracking({ session }) {
       })
       setBusy(false)
       if (error) { alert(error.message); return }
-      setFlash(`Play added to ${machine.machine_name}`)
-      setMachine(null)
-      setValues({})
+      setSummary({ machineName: machine.machine_name, dollars, units })
     }
 
     return (
@@ -92,8 +124,6 @@ export default function Tracking({ session }) {
 
   return (
     <div>
-      {flash && <div className="flash">{flash}</div>}
-
       <div className="row-between" style={{ marginBottom: 14 }}>
         <h2 className="screen-title" style={{ margin: 0 }}>My games</h2>
         <button className="btn primary small" onClick={() => setShowAdd(true)}>+ Add game</button>
@@ -106,7 +136,7 @@ export default function Tracking({ session }) {
       ) : (
         <div className="machine-list">
           {userMachines.map((m) => (
-            <button key={m.id} className="machine-item" onClick={() => { setMachine(m); setValues({}); setFlash('') }}>
+            <button key={m.id} className="machine-item" onClick={() => { setMachine(m); setValues({}) }}>
               <span>{m.machine_name}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="chev">›</span>

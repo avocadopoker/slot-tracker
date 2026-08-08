@@ -338,3 +338,10 @@ html, body, #root {
 }
 .empty.small { padding: 14px; margin: 12px 0; }
 .setting-row { display: flex; justify-content: space-between; align-items: center; }
+
+/* ---------- Clickable table rows + TOTAL row ---------- */
+.clickable-row { cursor: pointer; }
+.clickable-row:active { background: var(--red-tint); }
+.row-chev { color: var(--red); font-weight: 700; width: 20px; }
+.total-row { font-weight: 800; background: var(--surface); }
+.total-row td { border-bottom: 2px solid var(--red); }
