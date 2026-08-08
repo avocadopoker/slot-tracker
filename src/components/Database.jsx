@@ -100,6 +100,7 @@ function GameEntries({ machine, onBack }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
+  const [openPlayName, setOpenPlayName] = useState(null) // group drill-down
   const [editingEntry, setEditingEntry] = useState(null)
   const [editValues, setEditValues] = useState({})
   const [saving, setSaving] = useState(false)
@@ -115,8 +116,6 @@ function GameEntries({ machine, onBack }) {
     setLoading(false)
   }
   useEffect(() => { load() }, [machine.id])
-
-  const filtered = entries.filter((e) => matchesFilter(e.data?.play, filter))
 
   const startEdit = (entry) => {
     setEditingEntry(entry)
@@ -146,11 +145,11 @@ function GameEntries({ machine, onBack }) {
     load()
   }
 
-  // ---- Editing a single entry: focused form, same style as Tracking ----
+  // ---- Editing a single entry: focused form ----
   if (editingEntry) {
     return (
       <div>
-        <button className="linkbtn" onClick={cancelEdit}>‹ Entries</button>
+        <button className="linkbtn" onClick={cancelEdit}>‹ Back</button>
         <h2 className="screen-title">{editingEntry.data?.play || machine.name}</h2>
         <div className="form">
           {COMMON_FIELDS.map((f) => (
@@ -167,8 +166,57 @@ function GameEntries({ machine, onBack }) {
     )
   }
 
-  // ---- List of entries: same table style as the game overview,
-  // Play name instead of Game name ----
+  // Group all entries by their "play" text (blank/missing play = its own group)
+  const groups = {}
+  for (const e of entries) {
+    const key = e.data?.play?.trim() || ''
+    if (!groups[key]) groups[key] = []
+    groups[key].push(e)
+  }
+  const groupList = Object.entries(groups)
+    .map(([name, items]) => ({
+      name,
+      items,
+      entries: items.length,
+      units: items.reduce((s, e) => s + (Number(e.result_units) || 0), 0),
+      dollars: items.reduce((s, e) => s + (Number(e.result_dollars) || 0), 0),
+    }))
+    .filter((g) => matchesFilter(g.name, filter))
+    .sort((a, b) => b.entries - a.entries)
+
+  // ---- Level 2: individual entries within one play group ----
+  if (openPlayName !== null) {
+    const group = groupList.find((g) => g.name === openPlayName) ||
+      { name: openPlayName, items: groups[openPlayName] || [] }
+    return (
+      <div>
+        <button className="linkbtn" onClick={() => setOpenPlayName(null)}>‹ {machine.name}</button>
+        <h2 className="screen-title">{group.name || '(no name)'}</h2>
+        <table className="results">
+          <thead>
+            <tr>
+              <th className="left">Date</th>
+              <th>Units</th>
+              <th>$$$</th>
+              <th aria-hidden="true"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.items.map((e) => (
+              <tr key={e.id} className="clickable-row" onClick={() => startEdit(e)}>
+                <td className="left">{new Date(e.created_at).toLocaleDateString()}</td>
+                <td className={`num ${cls(e.result_units)}`}>{sign(e.result_units)}{fmt(e.result_units)}</td>
+                <td className={`num ${cls(e.result_dollars)}`}>{sign(e.result_dollars)}{fmt(e.result_dollars)}</td>
+                <td className="num row-chev">›</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  // ---- Level 1: grouped by play name ----
   return (
     <div>
       <button className="linkbtn" onClick={onBack}>‹ Database</button>
@@ -184,24 +232,26 @@ function GameEntries({ machine, onBack }) {
 
       {loading ? (
         <p className="muted">Loading…</p>
-      ) : filtered.length === 0 ? (
+      ) : groupList.length === 0 ? (
         <div className="empty">No entries match.</div>
       ) : (
         <table className="results">
           <thead>
             <tr>
               <th className="left">Play</th>
+              <th>#</th>
               <th>Units</th>
               <th>$$$</th>
               <th aria-hidden="true"></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((e) => (
-              <tr key={e.id} className="clickable-row" onClick={() => startEdit(e)}>
-                <td className="left">{e.data?.play || '—'}</td>
-                <td className={`num ${cls(e.result_units)}`}>{sign(e.result_units)}{fmt(e.result_units)}</td>
-                <td className={`num ${cls(e.result_dollars)}`}>{sign(e.result_dollars)}{fmt(e.result_dollars)}</td>
+            {groupList.map((g) => (
+              <tr key={g.name} className="clickable-row" onClick={() => setOpenPlayName(g.name)}>
+                <td className="left">{g.name || '(no name)'}</td>
+                <td className="num">{g.entries}</td>
+                <td className={`num ${cls(g.units)}`}>{sign(g.units)}{fmt(g.units)}</td>
+                <td className={`num ${cls(g.dollars)}`}>{sign(g.dollars)}{fmt(g.dollars)}</td>
                 <td className="num row-chev">›</td>
               </tr>
             ))}
